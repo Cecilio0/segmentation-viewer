@@ -1,7 +1,7 @@
 from girder import plugin
 
 
-class GirderPlugin(plugin.GirderPlugin):
+class SegmentationViewerPlugin(plugin.GirderPlugin):
     DISPLAY_NAME = 'Segmentation Viewer'
     CLIENT_SOURCE_PATH = './web_client'
 

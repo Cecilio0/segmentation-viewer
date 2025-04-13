@@ -17,7 +17,7 @@ jobs:
           command: |
             npm install
             npm run lint
-          working_directory: segmentation_visualization/web_client
+          working_directory: girder_segmentation_viewer/web_client
 
 workflows:
   version: 2

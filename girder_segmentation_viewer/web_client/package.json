@@ -1,5 +1,5 @@
 {
-    "name": "@girder/segmentation_visualization",
+    "name": "@girder/segmentation-viewer",
     "version": "0.1.0",
     "private": true,
     "description": "A plugin for visualizing segmentations within girder items",
@@ -9,7 +9,7 @@
         "@girder/core": "*"
     },
     "girderPlugin": {
-        "name": "segmentation_visualization",
+        "name": "segmentation_viewer",
         "main": "./main.js",
         "webpack": "webpack.helper"
     },

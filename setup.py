@@ -27,15 +27,15 @@ setup(
     long_description_content_type='text/x-rst',
     include_package_data=True,
     setup_requires=['setuptools-git'],
-    keywords='girder-plugin, segmentation_visualization',
-    name='segmentation_visualization',
+    keywords='girder-plugin, segmentation-viewer',
+    name='segmentation-viewer',
     packages=find_packages(exclude=['test', 'test.*']),
-    url='https://github.com/girder/segmentation_visualization',
+    url='https://github.com/Cecilio0/segmentation-viewer',
     version='0.1.0',
     zip_safe=False,
     entry_points={
         'girder.plugin': [
-            'segmentation_visualization = segmentation_visualization:SegmentationViewerPlugin'
+            'girder_segmentation_viewer = girder_segmentation_viewer:SegmentationViewerPlugin'
         ]
     }
 )
