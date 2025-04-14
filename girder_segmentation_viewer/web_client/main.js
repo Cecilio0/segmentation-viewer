@@ -1,11 +1,13 @@
-import { getCurrentUser } from "@girder/core/auth";
-import { AccessType } from "@girder/core/constants";
+import { getCurrentUser } from '@girder/core/auth';
+import { AccessType } from '@girder/core/constants';
 import { restRequest } from '@girder/core/rest';
 import events from '@girder/core/events';
 import { wrap } from '@girder/core/utilities/PluginUtils';
 import { ItemView } from '@girder/core/views/body';
 
-import DetectImagesItemTemplate from './templates/detectImagesItem.pug'
+import DetectImagesItemTemplate from './templates/detectImagesItem.pug';
+
+import SegItemView from './views/SegView';
 
 console.log('Loaded Seg World!');
 
@@ -22,7 +24,12 @@ wrap(ItemView, 'render', function (render) {
         }
 
         if (this.model.has('images')) {
-            console.log('Item has images property');
+            new SegItemView({
+                parentView: this,
+                item: this.model
+            })
+                .render()
+                .$el.insertAfter(this.$('.g-item-info'));
         }
     });
 

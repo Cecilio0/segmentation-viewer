@@ -74,8 +74,7 @@ def _is_readable_by_sitk(file) -> bool:
     """
 
     # Get original file extension
-    exts = '.'.join(file['exts'])
-    print(exts)
+    exts = f'.{'.'.join(file['exts'])}'
     try:
         # Create a temporary file with the same extension as the original
         with tempfile.NamedTemporaryFile(suffix=exts, delete=True) as tmp:
@@ -83,7 +82,6 @@ def _is_readable_by_sitk(file) -> bool:
             with File().open(file) as fp:
                 shutil.copyfileobj(fp, tmp)
                 tmp.flush()  # Ensure all data is written
-
             reader = sitk.ImageFileReader()
             reader.SetFileName(tmp.name)
             reader.ReadImageInformation()
