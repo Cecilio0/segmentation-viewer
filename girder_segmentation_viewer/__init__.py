@@ -19,7 +19,7 @@ class SegmentationViewerPlugin(GirderPlugin):
 
     def load(self, info):
         Item().exposeFields(level=AccessType.READ, fields={'images'})
-        # events.bind('data.process', 'dicom_viewer', _uploadHandler)
+        events.bind('data.process', 'segmentation_viewer', _upload_handler)
         info['apiRoot'].item.route(
             'POST',
             (':id', 'detect_images'),
@@ -90,3 +90,28 @@ def _is_readable_by_sitk(file) -> bool:
 
     except RuntimeError:
         return False
+
+def _upload_handler(event):
+    """
+    Whenever a new file is added to an item, check if the new file
+    is readable by SimpleITK. If it is, add it to the 'images' property
+    """
+    print('called _upload_handler')
+    # Get the ID of the file being added. If it even is a file
+    file = event.info['file']
+    if not _is_readable_by_sitk(file):
+        return
+
+    item = Item().load(file['itemId'], force=True)
+    # Initialize property if it does not already exist
+    if 'images' not in item:
+        item['images'] = []
+
+    item['images'].append(
+        {
+            'name': file['name'],
+            '_id': file['_id']
+        }
+    )
+    Item().save(item)
+    events.trigger('segmentation_viewer.upload.success')
