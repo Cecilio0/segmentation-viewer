@@ -15,7 +15,6 @@ setup(
         'Development Status :: 2 - Pre-Alpha',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
-        'Environment :: Web Environment',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
@@ -32,7 +31,7 @@ setup(
     name='segmentation-viewer',
     packages=find_packages(exclude=['test', 'test.*']),
     url='https://github.com/Cecilio0/segmentation-viewer',
-    version='0.1.0',
+    version='0.2.0',
     zip_safe=False,
     entry_points={
         'girder.plugin': [

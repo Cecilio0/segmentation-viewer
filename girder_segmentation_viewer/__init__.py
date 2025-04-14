@@ -1,4 +1,3 @@
-import os.path
 import tempfile
 import shutil
 
@@ -10,7 +9,6 @@ from girder import events
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import Resource
-from girder.exceptions import RestException
 import SimpleITK as sitk
 
 class SegmentationViewerPlugin(GirderPlugin):
