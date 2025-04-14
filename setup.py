@@ -26,7 +26,6 @@ setup(
     long_description=readme,
     long_description_content_type='text/x-rst',
     include_package_data=True,
-    setup_requires=['setuptools-git'],
     keywords='girder-plugin, segmentation-viewer',
     name='segmentation-viewer',
     packages=find_packages(exclude=['test', 'test.*']),
