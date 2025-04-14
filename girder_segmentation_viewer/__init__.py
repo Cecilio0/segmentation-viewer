@@ -20,6 +20,7 @@ class SegmentationViewerPlugin(GirderPlugin):
     def load(self, info):
         Item().exposeFields(level=AccessType.READ, fields={'images'})
         events.bind('data.process', 'segmentation_viewer', _upload_handler)
+        events.bind('model.file.remove', 'segmentation_viewer', _deletion_handler)
         info['apiRoot'].item.route(
             'POST',
             (':id', 'detect_images'),
@@ -45,7 +46,7 @@ class SegmentationItem(Resource):
     def detect_images(self, item) -> None:
         """
         Try to get all files within an item that can be read by itk,
-        if any store references to them in a new 'images' property
+        if any store references to them in a new 'images' property.
         """
 
         image_files = []
@@ -66,18 +67,20 @@ class SegmentationItem(Resource):
             # Save the item
             Item().save(item)
 
+
 def _is_readable_by_sitk(file) -> bool:
     """
-    Check if a girder file is readable by SimpleITK or not
+    Check if a girder file is readable by SimpleITK or not.
     :param file:
     :return: whether the file is readable by SimpleITK or not
     """
 
     # Get original file extension
-    _, ext = os.path.splitext(file['name'])
+    exts = '.'.join(file['exts'])
+    print(exts)
     try:
         # Create a temporary file with the same extension as the original
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=True) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=exts, delete=True) as tmp:
             # Download file from Girder into temp file
             with File().open(file) as fp:
                 shutil.copyfileobj(fp, tmp)
@@ -87,16 +90,15 @@ def _is_readable_by_sitk(file) -> bool:
             reader.SetFileName(tmp.name)
             reader.ReadImageInformation()
             return True
-
     except RuntimeError:
         return False
+
 
 def _upload_handler(event):
     """
     Whenever a new file is added to an item, check if the new file
-    is readable by SimpleITK. If it is, add it to the 'images' property
+    is readable by SimpleITK. If it is, add it to the 'images' property.
     """
-    print('called _upload_handler')
     # Get the ID of the file being added. If it even is a file
     file = event.info['file']
     if not _is_readable_by_sitk(file):
@@ -115,3 +117,29 @@ def _upload_handler(event):
     )
     Item().save(item)
     events.trigger('segmentation_viewer.upload.success')
+
+
+def _deletion_handler(event):
+    """
+    Whenever a file is about to be removed, check if it was contained
+    within the 'images' property. If it is, remove it.
+    """
+    file = event.info
+    item = Item().load(file['itemId'], force=True)
+
+    # Check if 'images' property even exists
+    if 'images' not in item:
+        return
+
+    images = []
+    for image in item['images']:
+        if image['_id'] != file['_id']:
+            images.append(image)
+
+    if images:
+        item['images'] = images
+    else:
+        del item['images'] # Remove the property entirely if the list is empty
+
+    Item().save(item)
+    events.trigger('segmentation_viewer.file.remove.success')
