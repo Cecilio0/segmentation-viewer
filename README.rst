@@ -1,5 +1,5 @@
 ==========================
-Segmentation Visualization
+Segmentation Viewer
 ==========================
 
 A plugin for visualizing segmentations within girder items
