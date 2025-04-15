@@ -10,7 +10,8 @@
     },
     "girderPlugin": {
         "name": "segmentation_viewer",
-        "main": "./main.js"
+        "main": "./main.js",
+        "webpack": "webpack.helper"
     },
     "scripts": {
         "lint": "eslint . && pug-lint . && stylint"
@@ -30,8 +31,10 @@
         "stylint": "^2"
     },
     "dependencies": {
-        "itk": "^14.1.1",
-        "vtk.js": "^14.0.0"
+        "@itk-wasm/image-io": "^1.6.0",
+        "jpeg-lossless-decoder-js": "~2.0",
+        "shader-loader": "^1.3.0",
+        "vtk.js": "^5.10.3"
     },
     "eslintConfig": {
         "extends": "@girder",
