@@ -20,9 +20,9 @@ import '../stylesheets/segItem.styl';
 const ImageFileModel = FileModel.extend({
     getImage: function () {
         console.log('[ImageFileModel::getImage] called');
-        if (!this._slice) {
+        if (!this._image) {
             // Cache the slice on the model
-            this._slice = restRequest({
+            this._image = restRequest({
                 url: `file/${this.id}/download`,
                 xhrFields: {
                     responseType: 'arraybuffer'
@@ -33,13 +33,12 @@ const ImageFileModel = FileModel.extend({
                     return new DataView(resp);
                 });
         }
-        return this._slice;
+        return this._image;
     }
 });
 
 const ImageFileCollection = FileCollection.extend({
     model: ImageFileModel,
-
     initialize: function () {
         console.log('[ImageFileCollection::initialize] called');
         FileCollection.prototype.initialize.apply(this, arguments);
@@ -48,16 +47,24 @@ const ImageFileCollection = FileCollection.extend({
         this._selectedSeg1 = null;
         this._selectedSeg2 = null;
     },
-
     selectSeg1Index: function (index) {
+        console.log(this.getTotalCount());
+        console.log(this.at(index));
         this._selectedSeg1 = index;
         this.trigger('g:selected-seg-1', this.at(index), index);
     },
+    selectBaseIndex: function (index) {
+        this._selectedBase = index;
+        this.trigger('g:selected-base', this.at(index), index);
+    },
+    selectSeg2Index: function (index) {
+        this._selectedSeg2 = index;
+        this.trigger('g:selected-seg-2', this.at(index), index);
+    }
 });
 
 const SegImageWidget = View.extend({
     className: 'g-seg',
-
     initialize: function (settings) {
         console.log('[SegImageWidget::initialize] called');
         this._slice = null;
@@ -68,7 +75,6 @@ const SegImageWidget = View.extend({
         //     interactor: null
         // };
     },
-
     destroy: function () {
         // if (this.vtk.interactor) {
         //     this.vtk.interactor.unbindEvents(this.el);
@@ -95,7 +101,10 @@ const SegItemView = View.extend({
      */
     initialize: function (settings) {
         console.log('[SegItemView::initialize] called');
-        this._files = new ImageFileCollection(settings.item.get('images').files);
+        console.log('[SegItemView::initialize] settings: ', settings);
+        console.log('[SegItemView::initialize] settings.item: ', settings.item);
+        console.log('[SegItemView::initialize] settings.item.get(images): ', settings.item.get('images'));
+        this._files = new ImageFileCollection(settings.item.get('images'));
 
         this._seg1View = null;
         this._baseImageView = null;
@@ -103,9 +112,8 @@ const SegItemView = View.extend({
         this._diffView = null;
 
         this.listenTo(this._files, 'g:selected-seg-1', this._onSeg1SelectionChanged);
-        this.listenTo(this._files, 'g:selected-base', this._onSeg1SelectionChanged);
-        this.listenTo(this._files, 'g:selected-seg-2', this._onSeg1SelectionChanged);
-        this.listenTo(this._files, 'g:selected-seg-diff', this._onSeg1SelectionChanged);
+        this.listenTo(this._files, 'g:selected-base', this._onBaseImageSelectionChanged);
+        this.listenTo(this._files, 'g:selected-seg-2', this._onSeg2SelectionChanged);
     },
     render: function () {
         this.$el.html(
@@ -113,22 +121,18 @@ const SegItemView = View.extend({
                 files: this._files
             })
         );
-
         this._seg1View = new SegImageWidget({
             el: this.$('.g-seg-1'),
             parentView: this
         });
-
         this._baseImageView = new SegImageWidget({
             el: this.$('.g-base'),
             parentView: this
         });
-
         this._seg2View = new SegImageWidget({
             el: this.$('.g-seg-2'),
             parentView: this
         });
-
         this._diffView = new SegImageWidget({
             el: this.$('.g-seg-diff'),
             parentView: this
@@ -140,12 +144,7 @@ const SegItemView = View.extend({
         // this._toggleControls(false);
         selectedFile.getImage()
             .done((image) => {
-                this.$('.g-seg-1.g-filename').text(selectedFile.name()).attr('title', selectedFile.name());
-                // this.$('.g-dicom-slider').val(selectedIndex);
-
-                // this._sliceMetadataView
-                //     .setSlice(image)
-                //     .render();
+                this.$('.g-seg-1-filename').text(selectedFile.name()).attr('title', selectedFile.name());
                 // this._sliceImageView
                 //     .setSlice(image)
                 //     .rerenderSlice();
@@ -154,6 +153,37 @@ const SegItemView = View.extend({
                 console.log('[SegItemView::_onSeg1SelectionChanged] called');
                 // this._toggleControls(true);
             });
+    },
+    _onBaseImageSelectionChanged: function (selectedFile, selectedIndex) {
+        // this._toggleControls(false);
+        selectedFile.getImage()
+            .done((image) => {
+                this.$('.g-base-filename').text(selectedFile.name()).attr('title', selectedFile.name());
+                // this._sliceImageView
+                //     .setSlice(image)
+                //     .rerenderSlice();
+            })
+            .always(() => {
+                console.log('[SegItemView::_onBaseImageSelectionChanged] called');
+                // this._toggleControls(true);
+            });
+    },
+    _onSeg2SelectionChanged: function (selectedFile, selectedIndex) {
+        // this._toggleControls(false);
+        selectedFile.getImage()
+            .done((image) => {
+                this.$('.g-seg-2-filename').text(selectedFile.name()).attr('title', selectedFile.name());
+                // this._sliceImageView
+                //     .setSlice(image)
+                //     .rerenderSlice();
+            })
+            .always(() => {
+                console.log('[SegItemView::_onSeg2SelectionChanged] called');
+                // this._toggleControls(true);
+            });
+    },
+    _updateDiff: function () {
+        console.log('[SegItemView::_updateDiff] called');
     }
 });
 
