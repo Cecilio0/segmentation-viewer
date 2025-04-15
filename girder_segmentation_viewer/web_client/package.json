@@ -32,7 +32,6 @@
     },
     "dependencies": {
         "@itk-wasm/image-io": "^1.6.0",
-        "jpeg-lossless-decoder-js": "~2.0",
         "shader-loader": "^1.3.0",
         "vtk.js": "^5.10.3"
     },
