@@ -1,0 +1,8 @@
+.g-item-base-image.g-info-list-entry
+  i.icon-shield
+  | Base image id:&nbsp;
+  = item.get('segmentation')['base_image']['_id']
+.g-item-base-image.g-info-list-entry
+  i.icon-shield
+  | Base image name:&nbsp;
+  = item.get('segmentation')['base_image']['name']

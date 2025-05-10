@@ -1,19 +1,24 @@
-import { getCurrentUser } from '@girder/core/auth';
-import { AccessType } from '@girder/core/constants';
+import $ from 'jquery';
+import _ from 'underscore';
+
+import { getCurrentUser } from "@girder/core/auth";
+import { AccessType } from "@girder/core/constants";
 import { restRequest } from '@girder/core/rest';
 import events from '@girder/core/events';
 import { wrap } from '@girder/core/utilities/PluginUtils';
 import { ItemView } from '@girder/core/views/body';
+import EditItemWidget from '@girder/core/views/widgets/EditItemWidget';
 
-import DetectImagesItemTemplate from './templates/detectImagesItem.pug';
+import DetectImagesItemTemplate from './templates/detectImagesItem.pug'
+import SetBaseImageTemplate from './templates/setBaseImage.pug'
+import ItemBaseImageWidget from './templates/itemBaseImageWidget.pug'
 
-import SegItemView from './views/SegView';
+import SegItemView from "./views/SegView";
 
-console.log('Loaded Seg World!');
+console.log('Loaded Hello World! 4');
 
 wrap(ItemView, 'render', function (render) {
     this.once('g:rendered', () => {
-        console.log('Rendered...');
         // Check if the user has permissions to extract image data
         if (this.model.get('_accessLevel') >= AccessType.WRITE) {
             // Add button for image extraction
@@ -23,7 +28,18 @@ wrap(ItemView, 'render', function (render) {
             }));
         }
 
-        if (this.model.has('images')) {
+        console.log(this.model.has('segmentation'));
+        if (this.model.has('segmentation')) {
+            let segmentation = this.model.get('segmentation');
+            console.log(segmentation);
+            // Show in item info
+            if (segmentation['base_image'] && segmentation['base_image']['name'] && segmentation['base_image']['_id']) {
+                this.$('.g-item-info').append(ItemBaseImageWidget({
+                    item: this.model,
+                    parentView: this
+                }));
+            }
+
             new SegItemView({
                 parentView: this,
                 item: this.model
@@ -46,7 +62,7 @@ ItemView.prototype.events['click .g-detect-images-item'] = function () {
             // Show up a message to alert the user it was done
             events.trigger('g:alert', {
                 icon: 'ok',
-                text: 'Images within item detected.',
+                text: 'Images within item detected successfully.',
                 type: 'success',
                 timeout: 4000
             });
