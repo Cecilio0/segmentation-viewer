@@ -2,6 +2,7 @@ import $ from 'jquery';
 import _ from 'underscore';
 
 import './views/EditItemWidget';
+import './views/UploadWidget';
 
 import { getCurrentUser } from "@girder/core/auth";
 import { AccessType } from "@girder/core/constants";
@@ -11,11 +12,11 @@ import { wrap } from '@girder/core/utilities/PluginUtils';
 import { ItemView } from '@girder/core/views/body';
 
 import DetectImagesItemTemplate from './templates/detectImagesItem.pug'
-import ItemBaseImageWidget from './templates/itemBaseImageWidget.pug'
+import ItemBaseImageWidgetTemplate from './templates/itemBaseImageWidget.pug'
 
 import SegItemView from "./views/SegView";
 
-console.log('Loaded Hello World! 8');
+console.log('Loaded Hello World! 9');
 
 wrap(ItemView, 'render', function (render) {
     this.once('g:rendered', () => {
@@ -32,23 +33,28 @@ wrap(ItemView, 'render', function (render) {
             let segmentation = this.model.get('segmentation');
             // Show in item info
             if (segmentation['base_image'] && segmentation['base_image']['name'] && segmentation['base_image']['_id']) {
-                this.$('.g-item-info').append(ItemBaseImageWidget({
+                this.$('.g-item-info').append(ItemBaseImageWidgetTemplate({
                     item: this.model,
                     parentView: this
                 }));
             }
 
-            new SegItemView({
-                parentView: this,
-                item: this.model
-            })
-                .render()
-                .$el.insertAfter(this.$('.g-item-info'));
+            if (segmentation['images']){
+                new SegItemView({
+                    parentView: this,
+                    item: this.model
+                }).render()
+                    .$el.insertAfter(this.$('.g-item-info'));
+            }
         }
-    });
+    }, this);
 
-    return render.call(this);
+    render.call(this)
+
+    return this;
 });
+
+
 
 // Detect images button logic
 ItemView.prototype.events['click .g-detect-images-item'] = function () {
