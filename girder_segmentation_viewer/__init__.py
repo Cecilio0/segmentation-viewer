@@ -274,20 +274,16 @@ def _update_base_image(event):
 
     if 'segmentation' not in item:
         # Create from scratch
-        item['segmentation'] = {
-            'base_image': {
-                'name': base_image_file['name'],
-                '_id': base_image_file['_id']
-            }
-        }
-    elif 'base_image' not in item['segmentation']:
-        # Create base_image
-        item['segmentation']['base_image'] = {
-            'name': base_image_file['name'],
-            '_id': base_image_file['_id']
-        }
-    elif item['segmentation']['base_image']['_id'] is new_base_image_id:
+        item['segmentation'] = {}
+    elif ('base_image' in item['segmentation']
+          and item['segmentation']['base_image']['_id'] is new_base_image_id):
         return  # No changes
+
+    # Create base_image
+    item['segmentation']['base_image'] = {
+        'name': base_image_file['name'],
+        '_id': base_image_file['_id']
+    }
 
     Item().save(item)
 
