@@ -1,0 +1,6 @@
+.g-set-base-image.form-group
+  label.control-label(for="g-base-image-id") Base image id (Optional)
+  if currentBaseImage
+    input#g-base-image-id.input-sm.form-control(type="text", placeholder="Enter base image id here", value=currentBaseImage)
+  else
+    input#g-base-image-id.input-sm.form-control(type="text", placeholder="Enter base image id here")

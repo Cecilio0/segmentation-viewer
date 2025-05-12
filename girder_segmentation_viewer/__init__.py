@@ -2,11 +2,10 @@ import tempfile
 import shutil
 
 from girder.constants import TokenScope, AccessType
-from girder.exceptions import GirderException
+from girder.exceptions import ValidationException
 from girder.models.file import File
 from girder.models.folder import Folder
 from girder.models.item import Item
-from girder.api.v1.item import Item as ItemClass
 from girder.plugin import GirderPlugin
 from girder import events
 from girder.api import access
@@ -20,8 +19,17 @@ class SegmentationViewerPlugin(GirderPlugin):
 
     def load(self, info):
         Item().exposeFields(level=AccessType.READ, fields={'segmentation'})
+
+        # File handlers
         events.bind('data.process', 'segmentation_viewer', _upload_handler)
         events.bind('model.file.remove', 'segmentation_viewer', _deletion_handler)
+
+        # Base image handlers
+        events.bind('rest.post.item.after', 'segmentation_viewer', post_item_after)
+        events.bind('rest.post.item/:id/copy.after', 'segmentation_viewer', post_item_copy_after)
+        events.bind('rest.put.item/:id.after', 'segmentation_viewer', put_item_after)
+
+        # Endpoints
         info['apiRoot'].item.route(
             'POST',
             (':id', 'detect_images'),
@@ -72,7 +80,7 @@ class SegmentationItem(Resource):
         """
         base_image_file = File().load(base_image_id, force=True)
         if not base_image_file:
-            raise GirderException('Base image ID was invalid')
+            raise ValidationException('Base image ID is invalid.', 'base_image_id')
 
         new_item = self.item_class.createItem(
             folder=folder, name=name, creator=self.getCurrentUser(),
@@ -155,7 +163,7 @@ class SegmentationItem(Resource):
             item['segmentation'] = {}
         base_image_file = File().load(base_image_id, force=True)
         if not base_image_file:
-            raise GirderException('Base image ID was invalid')
+            raise ValidationException('Base image ID is invalid.', 'base_image_id')
         item['segmentation']['base_image'] = {
             'name': base_image_file['name'],
             '_id': base_image_file['_id']
@@ -186,6 +194,8 @@ def _is_readable_by_sitk(file) -> bool:
     except RuntimeError:
         return False
 
+
+# File handlers
 
 def _upload_handler(event):
     """
@@ -237,3 +247,58 @@ def _deletion_handler(event):
 
     Item().save(item)
     events.trigger('segmentation_viewer.file.remove.success')
+
+
+# Base image handlers
+
+def _update_base_image(event):
+    """
+    REST event handler to update item with a base image, if provided
+    """
+    params = event.info['params']
+    if 'base_image_id' not in params:
+        return
+
+    item = Item().load(event.info['returnVal']['_id'], force=True, exc=True)
+    new_base_image_id = params['base_image_id']
+    if not new_base_image_id:
+        if 'segmentation' not in item:
+            return
+        # If the field is empty it means it is to be removed
+        del item['segmentation']
+        Item().save(item)
+
+    base_image_file = File().load(new_base_image_id, force=True)
+    if not base_image_file:
+        raise ValidationException('Base image ID is invalid.', 'base_image_id')
+
+    if 'segmentation' not in item:
+        # Create from scratch
+        item['segmentation'] = {
+            'base_image': {
+                'name': base_image_file['name'],
+                '_id': base_image_file['_id']
+            }
+        }
+    elif 'base_image' not in item['segmentation']:
+        # Create base_image
+        item['segmentation']['base_image'] = {
+            'name': base_image_file['name'],
+            '_id': base_image_file['_id']
+        }
+    elif item['segmentation']['base_image']['_id'] is new_base_image_id:
+        return  # No changes
+
+    Item().save(item)
+
+
+def post_item_after(event):
+    _update_base_image(event)
+
+
+def post_item_copy_after(event):
+    _update_base_image(event)
+
+
+def put_item_after(event):
+    _update_base_image(event)

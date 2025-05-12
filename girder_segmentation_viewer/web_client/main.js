@@ -1,21 +1,21 @@
 import $ from 'jquery';
 import _ from 'underscore';
 
+import './views/EditItemWidget';
+
 import { getCurrentUser } from "@girder/core/auth";
 import { AccessType } from "@girder/core/constants";
 import { restRequest } from '@girder/core/rest';
 import events from '@girder/core/events';
 import { wrap } from '@girder/core/utilities/PluginUtils';
 import { ItemView } from '@girder/core/views/body';
-import EditItemWidget from '@girder/core/views/widgets/EditItemWidget';
 
 import DetectImagesItemTemplate from './templates/detectImagesItem.pug'
-import SetBaseImageTemplate from './templates/setBaseImage.pug'
 import ItemBaseImageWidget from './templates/itemBaseImageWidget.pug'
 
 import SegItemView from "./views/SegView";
 
-console.log('Loaded Hello World! 4');
+console.log('Loaded Hello World! 8');
 
 wrap(ItemView, 'render', function (render) {
     this.once('g:rendered', () => {
@@ -28,10 +28,8 @@ wrap(ItemView, 'render', function (render) {
             }));
         }
 
-        console.log(this.model.has('segmentation'));
         if (this.model.has('segmentation')) {
             let segmentation = this.model.get('segmentation');
-            console.log(segmentation);
             // Show in item info
             if (segmentation['base_image'] && segmentation['base_image']['name'] && segmentation['base_image']['_id']) {
                 this.$('.g-item-info').append(ItemBaseImageWidget({
@@ -52,6 +50,7 @@ wrap(ItemView, 'render', function (render) {
     return render.call(this);
 });
 
+// Detect images button logic
 ItemView.prototype.events['click .g-detect-images-item'] = function () {
     restRequest({
         method: 'POST',
