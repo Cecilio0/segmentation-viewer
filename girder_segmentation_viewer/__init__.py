@@ -81,6 +81,8 @@ class SegmentationItem(Resource):
         base_image_file = File().load(base_image_id, force=True)
         if not base_image_file:
             raise ValidationException('Base image ID is invalid.', 'base_image_id')
+        if not _is_readable_by_sitk(base_image_file):
+            raise ValidationException('Referenced file is not an image', 'base_image_id')
 
         new_item = self.item_class.createItem(
             folder=folder, name=name, creator=self.getCurrentUser(),
@@ -161,9 +163,13 @@ class SegmentationItem(Resource):
         """
         if 'segmentation' not in item:
             item['segmentation'] = {}
+
         base_image_file = File().load(base_image_id, force=True)
         if not base_image_file:
             raise ValidationException('Base image ID is invalid.', 'base_image_id')
+        if not _is_readable_by_sitk(base_image_file):
+            raise ValidationException('Referenced file is not an image', 'base_image_id')
+
         item['segmentation']['base_image'] = {
             'name': base_image_file['name'],
             '_id': base_image_file['_id']
@@ -186,14 +192,12 @@ def _is_readable_by_sitk(file) -> bool:
             with File().open(file) as fp:
                 shutil.copyfileobj(fp, tmp)
                 tmp.flush()  # Ensure all data is written
-            print(tmp.name)
             reader = sitk.ImageFileReader()
             reader.SetFileName(tmp.name)
             reader.ReadImageInformation()
             return True
     except RuntimeError:
         return False
-
 
 # File handlers
 
@@ -248,7 +252,6 @@ def _deletion_handler(event):
     Item().save(item)
     events.trigger('segmentation_viewer.file.remove.success')
 
-
 # Base image handlers
 
 def _update_base_image(event):
@@ -271,13 +274,15 @@ def _update_base_image(event):
     base_image_file = File().load(new_base_image_id, force=True)
     if not base_image_file:
         raise ValidationException('Base image ID is invalid.', 'base_image_id')
+    if not _is_readable_by_sitk(base_image_file):
+        raise ValidationException('Referenced file is not an image', 'base_image_id')
 
     if 'segmentation' not in item:
         # Create from scratch
         item['segmentation'] = {}
     elif ('base_image' in item['segmentation']
           and item['segmentation']['base_image']['_id'] is new_base_image_id):
-        return  # No changes
+        return # No changes
 
     # Create base_image
     item['segmentation']['base_image'] = {
@@ -286,7 +291,6 @@ def _update_base_image(event):
     }
 
     Item().save(item)
-
 
 def post_item_after(event):
     _update_base_image(event)
