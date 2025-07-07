@@ -7,7 +7,6 @@ import vtkOpenGLRenderWindow from 'vtk.js/Sources/Rendering/OpenGL/RenderWindow'
 import vtkRenderer from 'vtk.js/Sources/Rendering/Core/Renderer';
 import vtkRenderWindow from 'vtk.js/Sources/Rendering/Core/RenderWindow';
 import vtkRenderWindowInteractor from 'vtk.js/Sources/Rendering/Core/RenderWindowInteractor';
-// import { readImage } from '@itk-wasm/image-io';
 
 import { restRequest } from '@girder/core/rest';
 import FileModel from '@girder/core/models/FileModel';
@@ -50,7 +49,6 @@ const ImageFileCollection = FileCollection.extend({
         console.log('[ImageFileCollection::initialize] called');
         FileCollection.prototype.initialize.apply(this, arguments);
 
-        this._selectedBase = null;
         this._selectedSeg1 = null;
         this._selectedSeg2 = null;
     },
@@ -59,7 +57,13 @@ const ImageFileCollection = FileCollection.extend({
         console.log(this.at(index));
         this._selectedSeg1 = index;
         this.trigger('g:selected-seg-1', this.at(index), index);
-    }
+    },
+    selectSeg2Index: function (index) {
+        console.log(this.getTotalCount());
+        console.log(this.at(index));
+        this._selectedSeg2 = index;
+        this.trigger('g:selected-seg-2', this.at(index), index);
+    },
 });
 
 const SegImageWidget = View.extend({
@@ -227,6 +231,7 @@ const SegItemView = View.extend({
         // },
         'click .g-test': function (event) {
             this._files.selectSeg1Index(0);
+            this._files.selectSeg2Index(1);
         }
     },
     /**
@@ -237,16 +242,20 @@ const SegItemView = View.extend({
         console.log('[SegItemView::initialize] called');
         console.log('[SegItemView::initialize] settings: ', settings);
         console.log('[SegItemView::initialize] settings.item: ', settings.item);
-        console.log('[SegItemView::initialize] settings.item.get(images): ', settings.item.get('images'));
-        this._files = new ImageFileCollection(settings.item.get('images'));
+        console.log('[SegItemView::initialize] settings.item.get(images): ', settings.item.get('segmentation'));
+        this._files = new ImageFileCollection(settings.item.get('segmentation').images || []);
+        this._baseImageFile = new ImageFileModel(settings.item.get('segmentation').base_image || {});
+        console.log('[SegItemView::initialize] this._files: ', this._files);
+        console.log('[SegItemView::initialize] this._baseImageFile: ', this._baseImageFile);
 
         this._seg1View = null;
         this._baseImageView = null;
         this._seg2View = null;
         this._diffView = null;
 
+        this._setBaseImage();
+
         this.listenTo(this._files, 'g:selected-seg-1', this._onSeg1SelectionChanged);
-        this.listenTo(this._files, 'g:selected-base', this._onBaseImageSelectionChanged);
         this.listenTo(this._files, 'g:selected-seg-2', this._onSeg2SelectionChanged);
     },
     render: function () {
@@ -292,20 +301,6 @@ const SegItemView = View.extend({
                 // this._toggleControls(true);
             });
     },
-    _onBaseImageSelectionChanged: function (selectedFile, selectedIndex) {
-        // this._toggleControls(false);
-        selectedFile.getImage()
-            .done((image) => {
-                this.$('.g-base-filename').text(selectedFile.name()).attr('title', selectedFile.name());
-                // this._sliceImageView
-                //     .setSlice(image)
-                //     .rerenderSlice();
-            })
-            .always(() => {
-                console.log('[SegItemView::_onSeg1SelectionChanged] called');
-                // this._toggleControls(true);
-            });
-    },
     _onSeg2SelectionChanged: function (selectedFile, selectedIndex) {
         // this._toggleControls(false);
         selectedFile.getImage()
@@ -316,10 +311,24 @@ const SegItemView = View.extend({
                 //     .rerenderSlice();
             })
             .always(() => {
-                console.log('[SegItemView::_onSeg1SelectionChanged] called');
+                console.log('[SegItemView::_onSeg2SelectionChanged] called');
                 // this._toggleControls(true);
             });
-    }
+    },
+    _setBaseImage: function () {
+        // this._toggleControls(false);
+        this._baseImageFile.getImage()
+            .done((image) => {
+                this.$('.g-base-filename').text(this._baseImageFile.name()).attr('title', this._baseImageFile.name());
+                // this._sliceImageView
+                //     .setSlice(image)
+                //     .rerenderSlice();
+            })
+            .always(() => {
+                console.log('[SegItemView::_onBaseImageSelectionChanged] called');
+                // this._toggleControls(true);
+            });
+    },
 });
 
 export default SegItemView;

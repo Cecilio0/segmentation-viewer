@@ -1,22 +1,20 @@
-import $ from 'jquery';
-import _ from 'underscore';
 
 import './views/EditItemWidget';
 import './views/UploadWidget';
 
-import { getCurrentUser } from "@girder/core/auth";
-import { AccessType } from "@girder/core/constants";
+import { getCurrentUser } from '@girder/core/auth';
+import { AccessType } from '@girder/core/constants';
 import { restRequest } from '@girder/core/rest';
 import events from '@girder/core/events';
 import { wrap } from '@girder/core/utilities/PluginUtils';
 import { ItemView } from '@girder/core/views/body';
 
-import DetectImagesItemTemplate from './templates/detectImagesItem.pug'
-import ItemBaseImageWidgetTemplate from './templates/itemBaseImageWidget.pug'
+import DetectImagesItemTemplate from './templates/detectImagesItem.pug';
+import ItemBaseImageWidgetTemplate from './templates/itemBaseImageWidget.pug';
 
-import SegItemView from "./views/SegView";
+import SegItemView from './views/SegView';
 
-console.log('Loaded Hello World! 9');
+console.log('Loaded Hello World! 12');
 
 wrap(ItemView, 'render', function (render) {
     this.once('g:rendered', () => {
@@ -39,7 +37,9 @@ wrap(ItemView, 'render', function (render) {
                 }));
             }
 
-            if (segmentation['images']){
+            console.log('Segmentation images exist:', segmentation['images']);
+            console.log('Segmentation images length:', segmentation['images'].length);
+            if (segmentation['images'] && segmentation['images'].length > 0 && segmentation['base_image']) {
                 new SegItemView({
                     parentView: this,
                     item: this.model
@@ -49,12 +49,10 @@ wrap(ItemView, 'render', function (render) {
         }
     }, this);
 
-    render.call(this)
+    render.call(this);
 
     return this;
 });
-
-
 
 // Detect images button logic
 ItemView.prototype.events['click .g-detect-images-item'] = function () {
