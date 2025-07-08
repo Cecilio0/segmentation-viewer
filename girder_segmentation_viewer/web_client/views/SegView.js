@@ -1,3 +1,4 @@
+import daikon from 'daikon';
 import vtkImageSlice from 'vtk.js/Sources/Rendering/Core/ImageSlice';
 import vtkImageData from 'vtk.js/Sources/Common/DataModel/ImageData';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
@@ -34,7 +35,9 @@ const ImageFileModel = FileModel.extend({
         return this._image;
     },
     readImageFile: function (resp) {
-        return new DataView(resp);
+        const dataView = new DataView(resp);
+        console.log('[ImageFileModel::readImageFile] called with response of length: ', dataView);
+        return daikon.Series.parseImage(dataView);
         // return readImage(new DataView(resp))
         //     .then((image) => {
         //         console.log(image);
@@ -71,6 +74,7 @@ const SegImageWidget = View.extend({
     initialize: function (settings) {
         console.log('[SegImageWidget::initialize] called');
         this._image = null;
+        this._segmentation = null;
         this.vtk = {
             renderer: null,
             actor: null,
@@ -83,6 +87,10 @@ const SegImageWidget = View.extend({
             this.vtk.interactor.unbindEvents(this.el);
         }
         View.prototype.destroy.apply(this, arguments);
+    },
+    setBaseImage: function (image) {
+        this._image = image;
+        return this;
     },
     /**
      * Do a full render.
@@ -98,7 +106,7 @@ const SegImageWidget = View.extend({
 
         const glWin = vtkOpenGLRenderWindow.newInstance();
         glWin.setContainer(this.el);
-        glWin.setSize(512, 512);
+        glWin.setSize(502, 224);
         renWin.addView(glWin);
 
         this.vtk.interactor = vtkRenderWindowInteractor.newInstance();
@@ -194,11 +202,11 @@ const SegImageWidget = View.extend({
     },
     _getImageData: function () {
         let tags;
-        if (!DicomSliceImageWidget.imageDataCache.has(this._image)) {
+        if (!SegImageWidget.imageDataCache.has(this._image)) {
             tags = this._extractImageData();
-            DicomSliceImageWidget.imageDataCache.set(this._image, tags);
+            SegImageWidget.imageDataCache.set(this._image, tags);
         } else {
-            return DicomSliceImageWidget.imageDataCache.get(this._image);
+            return SegImageWidget.imageDataCache.get(this._image);
         }
         return tags;
     },
@@ -240,9 +248,6 @@ const SegItemView = View.extend({
      */
     initialize: function (settings) {
         console.log('[SegItemView::initialize] called');
-        console.log('[SegItemView::initialize] settings: ', settings);
-        console.log('[SegItemView::initialize] settings.item: ', settings.item);
-        console.log('[SegItemView::initialize] settings.item.get(images): ', settings.item.get('segmentation'));
         this._files = new ImageFileCollection(settings.item.get('segmentation').images || []);
         this._baseImageFile = new ImageFileModel(settings.item.get('segmentation').base_image || {});
         console.log('[SegItemView::initialize] this._files: ', this._files);
@@ -320,9 +325,9 @@ const SegItemView = View.extend({
         this._baseImageFile.getImage()
             .done((image) => {
                 this.$('.g-base-filename').text(this._baseImageFile.name()).attr('title', this._baseImageFile.name());
-                // this._sliceImageView
-                //     .setSlice(image)
-                //     .rerenderSlice();
+                this._baseImageView
+                    .setBaseImage(image)
+                    .rerenderSlice();
             })
             .always(() => {
                 console.log('[SegItemView::_onBaseImageSelectionChanged] called');
