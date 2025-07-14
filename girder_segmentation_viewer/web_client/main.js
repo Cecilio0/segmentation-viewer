@@ -38,7 +38,6 @@ wrap(ItemView, 'render', function (render) {
             }
 
             console.log('Segmentation images exist:', segmentation['images']);
-            console.log('Segmentation images length:', segmentation['images'].length);
             if (segmentation['images'] && segmentation['images'].length > 0 && segmentation['base_image']) {
                 new SegItemView({
                     parentView: this,

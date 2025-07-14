@@ -18,32 +18,59 @@ import SegItemTemplate from '../templates/segItem.pug';
 import '../stylesheets/segItem.styl';
 
 const ImageFileModel = FileModel.extend({
-    getImage: function () {
+    // getImage: function () {
+    //     console.log('[ImageFileModel::getImage] called');
+    //     if (!this._image) {
+    //         // Cache the slice on the model
+    //         this._image = restRequest({
+    //             url: `file/${this.id}/download`,
+    //             xhrFields: {
+    //                 responseType: 'arraybuffer'
+    //             }
+    //         })
+    //             .then((resp) => {
+    //                 const dataView = new DataView(resp);
+    //                 console.log('[ImageFileModel::readImageFile] called with response of length: ', dataView);
+    //                 return daikon.Series.parseImage(dataView);
+    //             });
+    //     }
+    //     return this._image;
+    // },
+    getImage: function (isSeg, isDiff, itemID) {
         console.log('[ImageFileModel::getImage] called');
         if (!this._image) {
             // Cache the slice on the model
-            this._image = restRequest({
-                url: `file/${this.id}/download`,
-                xhrFields: {
-                    responseType: 'arraybuffer'
-                }
-            })
-                .then((resp) => {
-                    return this.readImageFile(resp);
-                });
+            if (isSeg) {
+                this._image = restRequest({
+                url: `/segmentation/${this.id}/segmentation_data`,
+                    method: 'GET',
+                })
+                    .then((resp) => {
+                        console.log('[ImageFileModel::readImageFile] called with response of length: ', resp);
+                        return resp;
+                    });
+            } else if (isDiff) {
+                this._image = restRequest({
+                url: `/segmentation/${this.id}/diff_data`,
+                    method: 'GET',
+                })
+                    .then((resp) => {
+                        console.log('[ImageFileModel::readImageFile] called with response of length: ', resp);
+                        return resp;
+                    });
+            } else {
+                this._image = restRequest({
+                    url: `/segmentation/${itemID}/base_image_data`,
+                    method: 'GET',
+                })
+                    .then((resp) => {
+                        console.log('[ImageFileModel::readImageFile] called with response of length: ', resp);
+                        return resp;
+                    });
+            }
         }
         return this._image;
     },
-    readImageFile: function (resp) {
-        const dataView = new DataView(resp);
-        console.log('[ImageFileModel::readImageFile] called with response of length: ', dataView);
-        return daikon.Series.parseImage(dataView);
-        // return readImage(new DataView(resp))
-        //     .then((image) => {
-        //         console.log(image);
-        //         return image;
-        //     });
-    }
 });
 
 const ImageFileCollection = FileCollection.extend({
@@ -56,25 +83,22 @@ const ImageFileCollection = FileCollection.extend({
         this._selectedSeg2 = null;
     },
     selectSeg1Index: function (index) {
-        console.log(this.getTotalCount());
-        console.log(this.at(index));
+        console.log('[ImageFileCollection::selectSeg1Index] called with index: ', index);
         this._selectedSeg1 = index;
-        this.trigger('g:selected-seg-1', this.at(index), index);
+        this.trigger('g:selected-seg-1', this.at(index));
     },
     selectSeg2Index: function (index) {
-        console.log(this.getTotalCount());
-        console.log(this.at(index));
+        console.log('[ImageFileCollection::selectSeg2Index] called with index: ', index);
         this._selectedSeg2 = index;
-        this.trigger('g:selected-seg-2', this.at(index), index);
+        this.trigger('g:selected-seg-2', this.at(index));
     },
 });
 
 const SegImageWidget = View.extend({
     className: 'g-seg',
     initialize: function (settings) {
-        console.log('[SegImageWidget::initialize] called');
+        console.log('[SegImageWidget::initialize] settings: ', settings);
         this._image = null;
-        this._segmentation = null;
         this.vtk = {
             renderer: null,
             actor: null,
@@ -88,7 +112,7 @@ const SegImageWidget = View.extend({
         }
         View.prototype.destroy.apply(this, arguments);
     },
-    setBaseImage: function (image) {
+    setImage: function (image) {
         this._image = image;
         return this;
     },
@@ -106,7 +130,7 @@ const SegImageWidget = View.extend({
 
         const glWin = vtkOpenGLRenderWindow.newInstance();
         glWin.setContainer(this.el);
-        glWin.setSize(502, 224);
+        glWin.setSize(502, 226);
         renWin.addView(glWin);
 
         this.vtk.interactor = vtkRenderWindowInteractor.newInstance();
@@ -120,18 +144,22 @@ const SegImageWidget = View.extend({
         if (this._image) {
             const mapper = vtkImageMapper.newInstance();
             mapper.setInputData(this._getImageData());
+            console.log('[SegImageWidget::render] mapper: ', mapper);
             this.vtk.actor.setMapper(mapper);
+            console.log('[SegImageWidget::render] this.vtk.actor: ', this.vtk.actor);
         }
 
         this.vtk.camera = this.vtk.renderer.getActiveCameraAndResetIfCreated();
-
+        console.log('[SegImageWidget::render] this.vtk.camera: ', this.vtk.camera);
         this.vtk.interactor.initialize();
         this.vtk.interactor.bindEvents(this.el);
         this.vtk.interactor.start();
 
         this.autoLevels(false);
         this.autoZoom(false);
+        console.log('[SegImageWidget::render] this.vtk.interactor: ', this.vtk.interactor);
         this.vtk.interactor.render();
+        console.log('[SegImageWidget::render] fater render');
 
         return this;
     },
@@ -210,21 +238,36 @@ const SegImageWidget = View.extend({
         }
         return tags;
     },
+    // _extractImageData: function () {
+    //     const rows = this._image.getRows();
+    //     const cols = this._image.getCols();
+    //     const rowSpacing = this._image.getPixelSpacing()[0];
+    //     const colSpacing = this._image.getPixelSpacing()[1];
+
+    //     const imageData = vtkImageData.newInstance();
+    //     imageData.setOrigin(0, 0, 0);
+    //     imageData.setSpacing(colSpacing, rowSpacing, 1);
+    //     imageData.setExtent(0, cols - 1, 0, rows - 1, 0, 0);
+
+    //     console.log('[SegImageWidget::_extractImageData] this._image: ', this._image.getInterpretedData());
+    //     const values = this._image.getInterpretedData();
+    //     const dataArray = vtkDataArray.newInstance({ values: values });
+    //     imageData.getPointData().setScalars(dataArray);
+
+    //     return imageData;
+    // },
     _extractImageData: function () {
-        const rows = this._image.getRows();
-        const cols = this._image.getCols();
-        const rowSpacing = this._image.getPixelSpacing()[0];
-        const colSpacing = this._image.getPixelSpacing()[1];
+        console.log('[SegImageWidget::_extractImageData] this._image: ', this._image);
 
         const imageData = vtkImageData.newInstance();
+        // imageData.setOrigin(this._image.origin);
         imageData.setOrigin(0, 0, 0);
-        imageData.setSpacing(colSpacing, rowSpacing, 1);
-        imageData.setExtent(0, cols - 1, 0, rows - 1, 0, 0);
-
-        const values = this._image.getInterpretedData();
-        const dataArray = vtkDataArray.newInstance({ values: values });
+        imageData.setSpacing(this._image.spacing);
+        imageData.setExtent(0, this._image.shape[0] -1, 0, this._image.shape[1] - 1, 0, this._image.shape[2] - 1);
+        const dataArray = vtkDataArray.newInstance({ values: this._image.data });
+        console.log('[SegImageWidget::_extractImageData] dataArray: ', dataArray.getData());
         imageData.getPointData().setScalars(dataArray);
-
+        console.log('[SegImageWidget::_extractImageData] imageData: ', imageData.getPointData().getScalars());
         return imageData;
     }
 }, {
@@ -248,17 +291,16 @@ const SegItemView = View.extend({
      */
     initialize: function (settings) {
         console.log('[SegItemView::initialize] called');
+        this._id = settings.item.id;
         this._files = new ImageFileCollection(settings.item.get('segmentation').images || []);
         this._baseImageFile = new ImageFileModel(settings.item.get('segmentation').base_image || {});
-        console.log('[SegItemView::initialize] this._files: ', this._files);
-        console.log('[SegItemView::initialize] this._baseImageFile: ', this._baseImageFile);
+        this._seg1File = null;
+        this._seg2File = null;
 
         this._seg1View = null;
         this._baseImageView = null;
         this._seg2View = null;
         this._diffView = null;
-
-        this._setBaseImage();
 
         this.listenTo(this._files, 'g:selected-seg-1', this._onSeg1SelectionChanged);
         this.listenTo(this._files, 'g:selected-seg-2', this._onSeg2SelectionChanged);
@@ -275,15 +317,25 @@ const SegItemView = View.extend({
             parentView: this
         });
 
+        if (this._files.length > 0) {
+            this._files.selectSeg1Index(0);
+        }
+
         this._baseImageView = new SegImageWidget({
             el: this.$('.g-base'),
             parentView: this
         });
 
+        this._setBaseImage();
+
         this._seg2View = new SegImageWidget({
             el: this.$('.g-seg-2'),
             parentView: this
         });
+
+        if (this._files.length > 1) {
+            this._files.selectSeg2Index(1);
+        }
 
         this._diffView = new SegImageWidget({
             el: this.$('.g-seg-diff'),
@@ -292,28 +344,28 @@ const SegItemView = View.extend({
 
         return this;
     },
-    _onSeg1SelectionChanged: function (selectedFile, selectedIndex) {
+    _onSeg1SelectionChanged: function (selectedFile) {
         // this._toggleControls(false);
-        selectedFile.getImage()
+        selectedFile.getImage(true)
             .done((image) => {
                 this.$('.g-seg-1-filename').text(selectedFile.name()).attr('title', selectedFile.name());
-                // this._sliceImageView
-                //     .setSlice(image)
-                //     .rerenderSlice();
+                this._seg1View
+                    .setImage(image)
+                    .rerenderSlice();
             })
             .always(() => {
                 console.log('[SegItemView::_onSeg1SelectionChanged] called');
                 // this._toggleControls(true);
             });
     },
-    _onSeg2SelectionChanged: function (selectedFile, selectedIndex) {
+    _onSeg2SelectionChanged: function (selectedFile) {
         // this._toggleControls(false);
-        selectedFile.getImage()
+        selectedFile.getImage(true)
             .done((image) => {
                 this.$('.g-seg-2-filename').text(selectedFile.name()).attr('title', selectedFile.name());
-                // this._sliceImageView
-                //     .setSlice(image)
-                //     .rerenderSlice();
+                this._seg2View
+                    .setImage(image)
+                    .rerenderSlice();
             })
             .always(() => {
                 console.log('[SegItemView::_onSeg2SelectionChanged] called');
@@ -322,11 +374,11 @@ const SegItemView = View.extend({
     },
     _setBaseImage: function () {
         // this._toggleControls(false);
-        this._baseImageFile.getImage()
+        this._baseImageFile.getImage(false, false, this._id)
             .done((image) => {
                 this.$('.g-base-filename').text(this._baseImageFile.name()).attr('title', this._baseImageFile.name());
                 this._baseImageView
-                    .setBaseImage(image)
+                    .setImage(image)
                     .rerenderSlice();
             })
             .always(() => {

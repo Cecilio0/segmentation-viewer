@@ -54,6 +54,16 @@ class SegmentationItem(Resource):
             (),
             self.create_segmentation_item
         )
+        self.route(
+            'GET',
+            (':id', 'base_image_data'),
+            self.get_base_image_data_json
+        )
+        self.route(
+            'GET',
+            (':id', 'segmentation_data'),
+            self.get_seg_data_json
+        )
 
     @access.user(scope=TokenScope.DATA_WRITE)
     @filtermodel(model=Item)
@@ -175,6 +185,99 @@ class SegmentationItem(Resource):
             '_id': base_image_file['_id']
         }
         Item().save(item)
+
+    @access.user(scope=TokenScope.DATA_READ)
+    @autoDescribeRoute(
+        Description('Get the base image of an item as a JSON object')
+        .modelParam(
+            'id',
+            'Item ID',
+            model='item',
+            level=AccessType.READ,
+            paramType='path'
+        )
+        .errorResponse('ID was invalid')
+        .errorResponse('Read permission denied on the item', 403)
+        .errorResponse('Item does not have a segmentation property', 400)
+        .errorResponse('Item does not have a base image', 400)
+    )
+    def get_base_image_data_json(self, item):
+        """
+        Get the base image of an item as a JSON object. readable by VTKjs.
+        """
+        if 'segmentation' not in item:
+            raise ValidationException('Item does not have a segmentation property', 'segmentation')
+
+        if 'base_image' not in item['segmentation']:
+            raise ValidationException('Item does not have a base image', 'base_image')
+
+        file = File().load(item['segmentation']['base_image']['_id'], force=True)
+        if not file:
+            raise ValidationException('Base image file not found', 'base_image')
+        
+        exts = f'.{'.'.join(file['exts'])}'
+        try:
+            # Create a temporary file with the same extension as the original
+            with tempfile.NamedTemporaryFile(suffix=exts, delete=True) as tmp:
+                # Download file from Girder into temp file
+                with File().open(file) as fp:
+                    shutil.copyfileobj(fp, tmp)
+                    tmp.flush()  # Ensure all data is written
+                image = sitk.ReadImage(tmp.name)
+                array = sitk.GetArrayFromImage(image)
+
+                image_data = {
+                    'shape': image.GetSize(),
+                    'spacing': image.GetSpacing(),
+                    'origin': image.GetOrigin(),
+                    'direction': image.GetDirection(),
+                    'data': array.flatten().tolist(),  # Convert to list for JSON serialization
+                }
+                print(f'Base image data: {image_data}')
+                return image_data
+        except RuntimeError:
+            raise ValidationException('Base image file is not readable by SimpleITK', 'base_image')
+
+    @access.user(scope=TokenScope.DATA_READ)
+    @autoDescribeRoute(
+        Description('get a segmentation as a JSON object')
+        .modelParam(
+            'id',
+            'File ID',
+            model='file',
+            level=AccessType.READ,
+            paramType='path'
+        )
+        .errorResponse('File ID was invalid')
+        .errorResponse('File was not found', 400)
+        .errorResponse('File was not readable by SimpleITK', 400)
+    )
+    def get_seg_data_json(self, file):
+        """
+        Get a segmentation as a JSON object. readable by VTKjs.
+        """
+        exts = f'.{'.'.join(file['exts'])}'
+        try:
+            # Create a temporary file with the same extension as the original
+            with tempfile.NamedTemporaryFile(suffix=exts, delete=True) as tmp:
+                # Download file from Girder into temp file
+                with File().open(file) as fp:
+                    shutil.copyfileobj(fp, tmp)
+                    tmp.flush()  # Ensure all data is written
+                seg = sitk.ReadImage(tmp.name)
+                array = sitk.GetArrayFromImage(seg)
+
+                seg_data = {
+                    'shape': seg.GetSize(),
+                    'spacing': seg.GetSpacing(),
+                    'origin': seg.GetOrigin(),
+                    'direction': seg.GetDirection(),
+                    'data': array.flatten().tolist(),  # Convert to list for JSON serialization
+                }
+                print(f'Seg data: {seg_data}')
+                return seg_data
+        except RuntimeError:
+            raise ValidationException('Segmentation file is not readable by SimpleITK', '')
 
 
 def _is_readable_by_sitk(file) -> bool:
