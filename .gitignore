@@ -50,3 +50,4 @@ venv/
 ENV/
 
 node_modules/
+girder_segmentation_viewer/web_client/package-lock.json
