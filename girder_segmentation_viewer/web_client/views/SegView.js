@@ -1,4 +1,3 @@
-import daikon from 'daikon';
 import vtkImageSlice from 'vtk.js/Sources/Rendering/Core/ImageSlice';
 import vtkImageData from 'vtk.js/Sources/Common/DataModel/ImageData';
 import vtkDataArray from 'vtk.js/Sources/Common/Core/DataArray';
@@ -18,65 +17,63 @@ import SegItemTemplate from '../templates/segItem.pug';
 import '../stylesheets/segItem.styl';
 
 const ImageFileModel = FileModel.extend({
-    // getImage: function () {
-    //     console.log('[ImageFileModel::getImage] called');
-    //     if (!this._image) {
-    //         // Cache the slice on the model
-    //         this._image = restRequest({
-    //             url: `file/${this.id}/download`,
-    //             xhrFields: {
-    //                 responseType: 'arraybuffer'
-    //             }
-    //         })
-    //             .then((resp) => {
-    //                 const dataView = new DataView(resp);
-    //                 console.log('[ImageFileModel::readImageFile] called with response of length: ', dataView);
-    //                 return daikon.Series.parseImage(dataView);
-    //             });
-    //     }
-    //     return this._image;
-    // },
-    getImage: function (isSeg, isDiff, itemID) {
-        console.log('[ImageFileModel::getImage] called');
+    getImage: function (slice, isSeg, diffInfo, itemID) {
         if (!this._image) {
             // Cache the slice on the model
             if (isSeg) {
-                this._image = restRequest({
-                url: `/segmentation/${this.id}/segmentation_data`,
+                return restRequest({
+                    url: `/segmentation/${this.id}/segmentation_data`,
                     method: 'GET',
                 })
                     .then((resp) => {
-                        console.log('[ImageFileModel::readImageFile] called with response of length: ', resp);
-                        return resp;
+                        console.log('[ImageFileModel::getImage] seg called with response of length: ', resp);
+                        this._image = resp;
+                        const slicedResp = Object.assign({}, resp);
+                        slicedResp.data = resp.data[slice];
+                        return slicedResp;
                     });
-            } else if (isDiff) {
-                this._image = restRequest({
-                url: `/segmentation/${this.id}/diff_data`,
+            } else if (diffInfo) {
+                // diffInfo should contain seg1_id and seg2_id
+                return restRequest({
+                    url: `/segmentation/diff_data/?seg1_id=${diffInfo.seg1_id}&seg2_id=${diffInfo.seg2_id}`,
                     method: 'GET',
                 })
                     .then((resp) => {
-                        console.log('[ImageFileModel::readImageFile] called with response of length: ', resp);
-                        return resp;
+                        console.log('[ImageFileModel::getImage] diff called with response: ', resp);
+                        this._image = resp;
+                        const slicedResp = Object.assign({}, resp);
+                        slicedResp.data = resp.data[slice];
+                        return slicedResp;
                     });
             } else {
-                this._image = restRequest({
+                return restRequest({
                     url: `/segmentation/${itemID}/base_image_data`,
                     method: 'GET',
                 })
                     .then((resp) => {
-                        console.log('[ImageFileModel::readImageFile] called with response of length: ', resp);
-                        return resp;
+                        console.log('[ImageFileModel::getImage] base called with response of length: ', resp);
+                        this._image = resp;
+                        const slicedResp = Object.assign({}, resp);
+                        slicedResp.data = resp.data[slice];
+                        return slicedResp;
                     });
             }
         }
-        return this._image;
+        
+        // When image is cached, return a resolved Promise to maintain consistency
+        console.log('[ImageFileModel::getImage] this._image: ', this._image);
+        const slicedResp = Object.assign({}, this._image);
+        slicedResp.data = this._image.data[slice];
+        return Promise.resolve(slicedResp);
     },
+    getSliceCount: function () {
+        return this._image.data.length;
+    }
 });
 
 const ImageFileCollection = FileCollection.extend({
     model: ImageFileModel,
     initialize: function () {
-        console.log('[ImageFileCollection::initialize] called');
         FileCollection.prototype.initialize.apply(this, arguments);
 
         this._selectedSeg1 = null;
@@ -99,6 +96,7 @@ const SegImageWidget = View.extend({
     initialize: function (settings) {
         console.log('[SegImageWidget::initialize] settings: ', settings);
         this._image = null;
+        this._slice = 0;
         this.vtk = {
             renderer: null,
             actor: null,
@@ -130,7 +128,7 @@ const SegImageWidget = View.extend({
 
         const glWin = vtkOpenGLRenderWindow.newInstance();
         glWin.setContainer(this.el);
-        glWin.setSize(502, 226);
+        glWin.setSize(256, 256);
         renWin.addView(glWin);
 
         this.vtk.interactor = vtkRenderWindowInteractor.newInstance();
@@ -238,36 +236,23 @@ const SegImageWidget = View.extend({
         }
         return tags;
     },
-    // _extractImageData: function () {
-    //     const rows = this._image.getRows();
-    //     const cols = this._image.getCols();
-    //     const rowSpacing = this._image.getPixelSpacing()[0];
-    //     const colSpacing = this._image.getPixelSpacing()[1];
-
-    //     const imageData = vtkImageData.newInstance();
-    //     imageData.setOrigin(0, 0, 0);
-    //     imageData.setSpacing(colSpacing, rowSpacing, 1);
-    //     imageData.setExtent(0, cols - 1, 0, rows - 1, 0, 0);
-
-    //     console.log('[SegImageWidget::_extractImageData] this._image: ', this._image.getInterpretedData());
-    //     const values = this._image.getInterpretedData();
-    //     const dataArray = vtkDataArray.newInstance({ values: values });
-    //     imageData.getPointData().setScalars(dataArray);
-
-    //     return imageData;
-    // },
     _extractImageData: function () {
         console.log('[SegImageWidget::_extractImageData] this._image: ', this._image);
 
         const imageData = vtkImageData.newInstance();
         // imageData.setOrigin(this._image.origin);
+        // imageData.setOrigin(0, 0);
         imageData.setOrigin(0, 0, 0);
+        // imageData.setSpacing([1, 1, 1]); // Default spacing, can be overridden
         imageData.setSpacing(this._image.spacing);
-        imageData.setExtent(0, this._image.shape[0] -1, 0, this._image.shape[1] - 1, 0, this._image.shape[2] - 1);
-        const dataArray = vtkDataArray.newInstance({ values: this._image.data });
-        console.log('[SegImageWidget::_extractImageData] dataArray: ', dataArray.getData());
+        imageData.setExtent(0, this._image.shape[0] -1, 0, this._image.shape[1] - 1, 0, 1);
+        const dataArray = vtkDataArray.newInstance({ 
+            values: this._image.data,
+            // numberOfComponents: this._image.shape[3] || 1 // Handle grayscale or RGB images
+        });
+
+        console.log('[SegImageWidget::_extractImageData] number of components: ', this._image.shape);
         imageData.getPointData().setScalars(dataArray);
-        console.log('[SegImageWidget::_extractImageData] imageData: ', imageData.getPointData().getScalars());
         return imageData;
     }
 }, {
@@ -277,12 +262,62 @@ const SegImageWidget = View.extend({
 const SegItemView = View.extend({
     className: 'g-view',
     events: {
-        // 'click .g-dicom-first': function (event) {
-        //     this._files.selectSeg1Index(parseInt(event.target.value));
-        // },
-        'click .g-test': function (event) {
-            this._files.selectSeg1Index(0);
-            this._files.selectSeg2Index(1);
+        'click .g-seg1-options a': function (event) {
+            event.preventDefault();
+            const index = parseInt($(event.target).data('index'));
+            this._files.selectSeg1Index(index);
+            this._updateDropdownText('.g-seg1-dropdown', $(event.target).text());
+        },
+        'click .g-seg2-options a': function (event) {
+            event.preventDefault();
+            const index = parseInt($(event.target).data('index'));
+            this._files.selectSeg2Index(index);
+            this._updateDropdownText('.g-seg2-dropdown', $(event.target).text());
+        },
+        'input .g-slice-slider': function (event) {
+            const slice = parseInt($(event.target).val());
+            this._slice = slice;
+            this.$('.g-slice-value').val(slice);
+            this._rerender();
+        },
+        'change .g-slice-value': function (event) {
+            let slice = parseInt($(event.target).val());
+            if (isNaN(slice)) slice = 0;
+            const max = parseInt($(event.target).attr('max'));
+            if (slice < 0) slice = 0;
+            if (slice > max) slice = max;
+            this._slice = slice;
+            this.$('.g-slice-slider').val(slice);
+            this.$('.g-slice-value').val(slice);
+            this._rerender();
+        },
+        'click .g-seg-zoom-in': function (event) {
+            event.preventDefault();
+            this._seg1View.zoomIn();
+            this._seg2View.zoomIn();
+            this._baseImageView.zoomIn();
+            this._diffView.zoomIn();
+        },
+        'click .g-seg-zoom-out': function (event) {
+            event.preventDefault();
+            this._seg1View.zoomOut();
+            this._seg2View.zoomOut();
+            this._baseImageView.zoomOut();
+            this._diffView.zoomOut();
+        },
+        'click .g-seg-reset-zoom': function (event) {
+            event.preventDefault();
+            this._seg1View.autoZoom();
+            this._seg2View.autoZoom();
+            this._baseImageView.autoZoom();
+            this._diffView.autoZoom();
+        },
+        'click .g-seg-auto-levels': function (event) {
+            event.preventDefault();
+            this._seg1View.autoLevels();
+            this._seg2View.autoLevels();
+            this._baseImageView.autoLevels();
+            this._diffView.autoLevels();
         }
     },
     /**
@@ -290,17 +325,21 @@ const SegItemView = View.extend({
      * @param {ItemModel} settings.item An item with its `dicom` attribute set.
      */
     initialize: function (settings) {
-        console.log('[SegItemView::initialize] called');
         this._id = settings.item.id;
         this._files = new ImageFileCollection(settings.item.get('segmentation').images || []);
         this._baseImageFile = new ImageFileModel(settings.item.get('segmentation').base_image || {});
         this._seg1File = null;
+        this._seg1Index = 0;
         this._seg2File = null;
+        this._seg2Index = 1;
 
         this._seg1View = null;
         this._baseImageView = null;
         this._seg2View = null;
         this._diffView = null;
+
+        this._sliceCount = null;
+        this._slice = 0;
 
         this.listenTo(this._files, 'g:selected-seg-1', this._onSeg1SelectionChanged);
         this.listenTo(this._files, 'g:selected-seg-2', this._onSeg2SelectionChanged);
@@ -312,13 +351,16 @@ const SegItemView = View.extend({
             })
         );
 
+        // Populate dropdowns with segmentation files
+        this._populateDropdowns();
+
         this._seg1View = new SegImageWidget({
             el: this.$('.g-seg-1'),
             parentView: this
         });
 
         if (this._files.length > 0) {
-            this._files.selectSeg1Index(0);
+            this._files.selectSeg1Index(this._seg1Index);
         }
 
         this._baseImageView = new SegImageWidget({
@@ -334,7 +376,7 @@ const SegItemView = View.extend({
         });
 
         if (this._files.length > 1) {
-            this._files.selectSeg2Index(1);
+            this._files.selectSeg2Index(this._seg2Index);
         }
 
         this._diffView = new SegImageWidget({
@@ -342,49 +384,143 @@ const SegItemView = View.extend({
             parentView: this
         });
 
+        this._setDiffImage();
+
         return this;
     },
     _onSeg1SelectionChanged: function (selectedFile) {
         // this._toggleControls(false);
-        selectedFile.getImage(true)
-            .done((image) => {
-                this.$('.g-seg-1-filename').text(selectedFile.name()).attr('title', selectedFile.name());
+        this._seg1File = selectedFile;
+        selectedFile.getImage(this._slice, true)
+            .then((image) => {
+                this._seg1View.$('.g-filename').text(selectedFile.name()).attr('title', selectedFile.name());
                 this._seg1View
                     .setImage(image)
                     .rerenderSlice();
-            })
-            .always(() => {
-                console.log('[SegItemView::_onSeg1SelectionChanged] called');
+                // Update diff image if both files are selected
+                this._updateDiffImageIfReady();
+                // console.log('[SegItemView::_onSeg1SelectionChanged] called');
                 // this._toggleControls(true);
             });
     },
     _onSeg2SelectionChanged: function (selectedFile) {
         // this._toggleControls(false);
-        selectedFile.getImage(true)
-            .done((image) => {
-                this.$('.g-seg-2-filename').text(selectedFile.name()).attr('title', selectedFile.name());
+        this._seg2File = selectedFile;
+        selectedFile.getImage(this._slice, true)
+            .then((image) => {
+                this._seg2View.$('.g-filename').text(selectedFile.name()).attr('title', selectedFile.name());
                 this._seg2View
                     .setImage(image)
                     .rerenderSlice();
-            })
-            .always(() => {
-                console.log('[SegItemView::_onSeg2SelectionChanged] called');
+                // Update diff image if both files are selected
+                this._updateDiffImageIfReady();
+                // console.log('[SegItemView::_onSeg2SelectionChanged] called');
                 // this._toggleControls(true);
             });
     },
     _setBaseImage: function () {
         // this._toggleControls(false);
-        this._baseImageFile.getImage(false, false, this._id)
-            .done((image) => {
-                this.$('.g-base-filename').text(this._baseImageFile.name()).attr('title', this._baseImageFile.name());
+        this._baseImageFile.getImage(this._slice, false, false, this._id)
+            .then((image) => {
+                this._baseImageView.$('.g-filename').text(this._baseImageFile.name()).attr('title', this._baseImageFile.name());
                 this._baseImageView
                     .setImage(image)
                     .rerenderSlice();
-            })
-            .always(() => {
-                console.log('[SegItemView::_onBaseImageSelectionChanged] called');
+                    // console.log('[SegItemView::_setBaseImage] called');
+                    // this._toggleControls(true);
+                this._setSliceCount();
+            });
+    },
+    _setDiffImage: function () {
+        // Initial call - will be updated when both segmentations are selected
+        this._updateDiffImageIfReady();
+    },
+    _updateDiffImageIfReady: function () {
+        // Only proceed if both segmentation files are selected
+        if (!this._seg1File || !this._seg2File) {
+            console.log('[SegItemView::_updateDiffImageIfReady] Waiting for both segmentation files to be selected');
+            return;
+        }
+
+        // this._toggleControls(false);
+        const diffInfo = {
+            seg1_id: this._seg1File.id,
+            seg2_id: this._seg2File.id
+        };
+
+        // Create a temporary file model to handle the diff request
+        const diffFileModel = new ImageFileModel();
+        diffFileModel.getImage(this._slice, false, diffInfo)
+            .then((diffImage) => {
+                this.$('.g-seg-diff-filename').text('Difference').attr('title', 'Difference');
+                this._diffView
+                    .setImage(diffImage)
+                    .rerenderSlice();
+                console.log('[SegItemView::_updateDiffImageIfReady] called');
+
                 // this._toggleControls(true);
             });
+    },
+    _setSliceCount: function () {
+        if (!this._sliceCount) {
+            let sliceCount = 0;
+            try {
+                sliceCount = this._baseImageFile.getSliceCount();
+                console.log('[SegItemView::render] getting sliceCount: ', sliceCount);
+            } catch (e) {
+                console.error('[SegItemView::render] Error getting slice count:', e);
+                sliceCount = 1;
+            }
+            console.log('[SegItemView::render] sliceCount: ', sliceCount);
+            this._sliceCount = sliceCount;
+        }
+        this.$('.g-slice-slider').attr('max', this._sliceCount - 1).val(this._slice);
+        this.$('.g-slice-value').attr('max', this._sliceCount - 1).val(this._slice);
+    },
+    _rerender: function () {
+        this._files.selectSeg1Index(this._files._selectedSeg1);
+        this._files.selectSeg2Index(this._files._selectedSeg2);
+        this._setBaseImage();
+        this._updateDiffImageIfReady();
+    },
+    _populateDropdowns: function () {
+        // Clear existing options
+        this.$('.g-seg1-options').empty();
+        this.$('.g-seg2-options').empty();
+
+        // Populate both dropdowns with the same files
+        this._files.each((file, index) => {
+            const fileName = file.name() || `Segmentation ${index + 1}`;
+            
+            // Add to Segmentation 1 dropdown
+            this.$('.g-seg1-options').append(
+                `<li><a href="#" data-index="${index}">${fileName}</a></li>`
+            );
+            
+            // Add to Segmentation 2 dropdown
+            this.$('.g-seg2-options').append(
+                `<li><a href="#" data-index="${index}">${fileName}</a></li>`
+            );
+        });
+
+        // Set initial dropdown text if files are available
+        if (this._files.length > 0) {
+            const firstFileName = this._files.at(0).name() || 'Segmentation 1';
+            this._updateDropdownText('.g-seg1-dropdown', firstFileName);
+            
+            if (this._files.length > 1) {
+                const secondFileName = this._files.at(1).name() || 'Segmentation 2';
+                this._updateDropdownText('.g-seg2-dropdown', secondFileName);
+            }
+        }
+    },
+    _updateDropdownText: function (dropdownSelector, text) {
+        // Update the dropdown button text while preserving the caret
+        const $button = this.$(dropdownSelector).find('.dropdown-toggle');
+        $button.contents().filter(function() {
+            return this.nodeType === 3; // Text node
+        }).remove();
+        $button.prepend(text + ' ');
     },
 });
 

@@ -14,7 +14,7 @@ import ItemBaseImageWidgetTemplate from './templates/itemBaseImageWidget.pug';
 
 import SegItemView from './views/SegView';
 
-console.log('Loaded Hello World! 12');
+console.log('Loaded Hello World! 17');
 
 wrap(ItemView, 'render', function (render) {
     this.once('g:rendered', () => {

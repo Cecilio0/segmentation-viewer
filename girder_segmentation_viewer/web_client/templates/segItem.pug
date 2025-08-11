@@ -4,37 +4,82 @@
     | Segmentation Viewer
 .g-panes.clearfix
   .g-file-selection
-    button.g-test.btn.btn-sm.btn-default(title="Zoom In")
-      | Test
+    .g-dropdown-container
+      .g-dropdown-group
+        label.g-dropdown-label Segmentation 1
+        .dropdown.g-seg1-dropdown
+          button.btn.btn-sm.btn-default.dropdown-toggle(type="button", data-toggle="dropdown", aria-haspopup="true", aria-expanded="false")
+            | Select option
+            span.caret
+          ul.dropdown-menu.g-seg1-options
+            // Options will be populated dynamically
+      
+      .g-dropdown-group
+        label.g-dropdown-label Segmentation 2
+        .dropdown.g-seg2-dropdown
+          button.btn.btn-sm.btn-default.dropdown-toggle(type="button", data-toggle="dropdown", aria-haspopup="true", aria-expanded="false")
+            | Select option
+            span.caret
+          ul.dropdown-menu.g-seg2-options
+            // Options will be populated dynamically
+
+    .g-comment-container
+      .g-comment-group
+        label.g-comment-label Comment Segmentation 1
+        textarea.g-seg1-comment(placeholder="Enter comments for Segmentation 1...")
+      
+      .g-comment-group
+        label.g-comment-label Comment Segmentation 2
+        textarea.g-seg2-comment(placeholder="Enter comments for Segmentation 2...")
+
+    .g-dropdown-container
+      .g-dropdown-group
+        label.g-dropdown-label Labels in segmentation 1
+        .dropdown.g-label1-dropdown
+          button.btn.btn-sm.btn-default.dropdown-toggle(type="button", data-toggle="dropdown", aria-haspopup="true", aria-expanded="false")
+            | Select option
+            span.caret
+          ul.dropdown-menu.g-label1-options
+            // Options will be populated dynamically
+      
+      .g-dropdown-group
+        label.g-dropdown-label Labels in segmentation 2
+        .dropdown.g-label2-dropdown
+          button.btn.btn-sm.btn-default.dropdown-toggle(type="button", data-toggle="dropdown", aria-haspopup="true", aria-expanded="false")
+            | Select option
+            span.caret
+          ul.dropdown-menu.g-label2-options
+            // Options will be populated dynamically
 
   .g-left
     // left up
     .g-seg-1
-      .g-seg-1-image
-      .g-seg-1-filename
+      .g-filename
     // left down
     .g-base
-      .g-base-image
-      .g-base-filename
+      .g-filename
 
   .g-right
     // right up
     .g-seg-2
-      .g-seg-2-image
-      .g-seg-2-filename
+      .g-filename
     // right down
     .g-seg-diff
-      .g-seg-diff-image
       // May be better as literal text
-      .g-diff-name
+      .g-filename
         | Difference
 
   .g-seg-controls
-    button.g-seg-zoom-in.btn.btn-sm.btn-default(title="Zoom In")
-      i.icon-zoom-in
-    button.g-seg-zoom-out.btn.btn-sm.btn-default(title="Zoom Out")
-      i.icon-zoom-out
-    button.g-seg-reset-zoom.btn.btn-sm.btn-default(title="Reset Zoom")
-      i.icon-search
-    button.g-seg-auto-levels.btn.btn-sm.btn-default(title="Auto Levels")
-      i.icon-ajust
+    .g-controls-left
+      label.g-slice-label(for="g-slice-slider") Slice
+      input#g-slice-slider.g-slice-slider(type="range", min="0", max="0", value="0")
+      input#g-slice-value.g-slice-value(type="number", min="0", max="0", value="0", step="1", style="width: 50px; margin-left: 10px;")
+    .g-controls-right
+      button.g-seg-zoom-in.btn.btn-sm.btn-default(title="Zoom In")
+        i.icon-zoom-in
+      button.g-seg-zoom-out.btn.btn-sm.btn-default(title="Zoom Out")
+        i.icon-zoom-out
+      button.g-seg-reset-zoom.btn.btn-sm.btn-default(title="Reset Zoom")
+        i.icon-search
+      button.g-seg-auto-levels.btn.btn-sm.btn-default(title="Auto Levels")
+        i.icon-ajust
