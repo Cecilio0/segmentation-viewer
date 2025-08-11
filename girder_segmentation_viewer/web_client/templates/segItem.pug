@@ -23,6 +23,14 @@
           ul.dropdown-menu.g-seg2-options
             // Options will be populated dynamically
 
+    .g-tag-container
+      .g-tag-group
+        label.g-tag-label Tag Segmentation 1
+        input.g-seg1-tag(type="text", placeholder="Enter tag for Segmentation 1...")
+      .g-tag-group
+        label.g-tag-label Tag Segmentation 2
+        input.g-seg2-tag(type="text", placeholder="Enter tag for Segmentation 2...")
+
     .g-comment-container
       .g-comment-group
         label.g-comment-label Comment Segmentation 1
@@ -83,3 +91,42 @@
         i.icon-search
       button.g-seg-auto-levels.btn.btn-sm.btn-default(title="Auto Levels")
         i.icon-ajust
+
+  .g-seg-info
+    .g-quantification-1
+      label.g-quant-label Quantification
+      .g-quant-content-1
+        .g-quant-row Min: 
+          span.g-quant1-min
+        .g-quant-row Max: 
+          span.g-quant1-max
+        .g-quant-row Mean: 
+          span.g-quant1-mean
+        .g-quant-row SD: 
+          span.g-quant1-sd
+        .g-quant-row Volume (mm3): 
+          span.g-quant1-volume
+
+    .g-quantification-2
+      label.g-quant-label Quantification
+      .g-quant-content-2
+        .g-quant-row Min: 
+          span.g-quant2-min
+        .g-quant-row Max: 
+          span.g-quant2-max
+        .g-quant-row Mean: 
+          span.g-quant2-mean
+        .g-quant-row SD: 
+          span.g-quant2-sd
+        .g-quant-row Volume (mm3): 
+          span.g-quant2-volume
+
+  .g-seg-metrics
+    label.g-seg-metrics-label Metrics
+    .g-seg-metrics-content
+      .g-quant-row DICE: 
+        span.g-seg-metrics-dice
+      .g-quant-row Hausdorff distance (mm): 
+        span.g-seg-metrics-hausdorff
+      .g-quant-row Average Symmetric Surface Distance (mm): 
+        span.g-seg-metrics-assd

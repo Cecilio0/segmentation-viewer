@@ -1,6 +1,10 @@
 .g-view
   margin-bottom 15px
 
+  input
+    border 1px solid #ccc
+    border-radius 4px
+
   .g-file-selection
     .g-dropdown-container
       display flex
@@ -23,20 +27,23 @@
         text-overflow ellipsis
         overflow hidden
 
-    .g-comment-container
+    .g-comment-container, .g-tag-container
       display flex
       gap 20px
       align-items flex-start
       margin-top 15px
       padding-right 15px
 
-    .g-comment-group
+    .g-comment-group, .g-tag-group
       display flex
       flex-direction column
       align-items flex-start
       flex 1
       width 256px
       max-width 256px
+
+    .g-seg1-tag, .g-seg2-tag
+      width 256px
 
     .g-comment-label
       margin-bottom 5px
@@ -52,10 +59,10 @@
       font-family inherit
       font-size 14px
 
-      &:focus
-        outline none
-        border-color #007cba
-        box-shadow 0 0 0 2px rgba(0, 124, 186, 0.2)
+      // &:focus
+      //   outline none
+      //   border-color #007cba
+      //   box-shadow 0 0 0 2px rgba(0, 124, 186, 0.2)
 
   .g-left
     width 256px
@@ -127,3 +134,30 @@
     display inline-block
     text-align center
 
+  .g-seg-info
+    margin-top 10px
+    width 532px
+    display flex
+    gap 20px
+
+  .g-quantification-1, .g-quantification-2
+    width 256px
+
+  .g-quant-content-1, .g-quant-content-2, .g-seg-metrics-content
+    border 1px solid #bbb
+    border-radius 6px
+    padding 10px
+    margin-top 5px
+    background #fafafa
+    font-size 14px
+
+  .g-quant-row
+    margin-bottom 4px
+    font-family inherit
+
+  .g-seg-metrics
+    margin-top 10px
+    width 532px
+    display flex
+    flex-direction column
+    align-items flex-start

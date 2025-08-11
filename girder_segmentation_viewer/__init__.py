@@ -276,7 +276,7 @@ class SegmentationItem(Resource):
             # Read both image files
             base_image_sitk, base_array = _read_image_with_sitk(base_image_file)
             seg_image_sitk, seg_array = _read_image_with_sitk(file)
-            
+
             print(f'Seg - Base image shape: {base_array.shape}, Segmentation shape: {seg_array.shape}')
             
             # Check if arrays have the same shape
@@ -333,6 +333,15 @@ class SegmentationItem(Resource):
             for seg_slice in seg_array:
                 seg_data_array.append(seg_slice.flatten().tolist())
 
+            # Compute quantification statistics for the overlay, Still not sure how to calculate them correctly 🫠
+            quantification = {
+                'min': overlay_array.min(),
+                'max': overlay_array.max(),
+                'mean': overlay_array.mean(),
+                'sd': overlay_array.std(),
+                'volume': overlay_array.size
+            }
+
             # Use base_image for spatial metadata (since both should have same metadata)
             seg_data = {
                 'shape': seg_image_sitk.GetSize(),
@@ -342,7 +351,8 @@ class SegmentationItem(Resource):
                 # 'data': overlay_array.flatten().tolist(),  # Convert to list for JSON serialization
                 # 'data': seg_array.flatten().tolist(),  # Convert to list for JSON serialization
                 'data': seg_data_array,  # Convert to list for JSON serialization
-                'type': 'segmentation_overlay'  # Add type identifier for frontend
+                'type': 'segmentation_overlay',  # Add type identifier for frontend
+                'quantification': quantification
             }
             
             # print(f'Seg - Final shape: {seg_data["shape"]}')
@@ -387,7 +397,7 @@ class SegmentationItem(Resource):
             # Read both segmentation files
             seg1_image, seg1_array = _read_image_with_sitk(seg1)
             seg2_image, seg2_array = _read_image_with_sitk(seg2)
-            
+
             # print(f'Diff - Seg1 shape: {seg1_array.shape}, Seg2 shape: {seg2_array.shape}')
             
             # Check if arrays have the same shape
@@ -420,7 +430,7 @@ class SegmentationItem(Resource):
                 'origin': seg1_image.GetOrigin(),
                 'direction': seg1_image.GetDirection(),
                 'data': diff_data_array,  # Convert to list for JSON serialization
-                'type': 'difference'  # Add type identifier for frontend
+                'type': 'difference',  # Add type identifier for frontend
             }
             
             # print(f'Diff - Final shape: {diff_data["shape"]}')
@@ -451,7 +461,7 @@ def _read_image_with_sitk(file):
         # Read image using SimpleITK
         image = sitk.ReadImage(tmp.name)
         array = sitk.GetArrayFromImage(image)
-        
+
         return image, array
 
 

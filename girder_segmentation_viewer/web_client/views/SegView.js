@@ -389,6 +389,7 @@ const SegItemView = View.extend({
         return this;
     },
     _onSeg1SelectionChanged: function (selectedFile) {
+        const mockValues = [100, 500, 240, 17, 12000];
         // this._toggleControls(false);
         this._seg1File = selectedFile;
         selectedFile.getImage(this._slice, true)
@@ -401,9 +402,17 @@ const SegItemView = View.extend({
                 this._updateDiffImageIfReady();
                 // console.log('[SegItemView::_onSeg1SelectionChanged] called');
                 // this._toggleControls(true);
+
+                // update seg quantification
+                this.$('.g-quant1-min').text(image['quantification']['min']);
+                this.$('.g-quant1-max').text(image['quantification']['max']);
+                this.$('.g-quant1-mean').text(image['quantification']['mean']);
+                this.$('.g-quant1-sd').text(image['quantification']['sd']);
+                this.$('.g-quant1-volume').text(image['quantification']['volume']);
             });
     },
     _onSeg2SelectionChanged: function (selectedFile) {
+        const mockValues = [105, 498, 244, 16, 11998];
         // this._toggleControls(false);
         this._seg2File = selectedFile;
         selectedFile.getImage(this._slice, true)
@@ -416,6 +425,13 @@ const SegItemView = View.extend({
                 this._updateDiffImageIfReady();
                 // console.log('[SegItemView::_onSeg2SelectionChanged] called');
                 // this._toggleControls(true);
+
+                // update seg quantification
+                this.$('.g-quant2-min').text(image['quantification']['min']);
+                this.$('.g-quant2-max').text(image['quantification']['max']);
+                this.$('.g-quant2-mean').text(image['quantification']['mean']);
+                this.$('.g-quant2-sd').text(image['quantification']['sd']);
+                this.$('.g-quant2-volume').text(image['quantification']['volume']);
             });
     },
     _setBaseImage: function () {
@@ -459,6 +475,11 @@ const SegItemView = View.extend({
                 console.log('[SegItemView::_updateDiffImageIfReady] called');
 
                 // this._toggleControls(true);
+
+                // update metrics
+                this.$('.g-seg-metrics-dice').text('0.804');
+                this.$('.g-seg-metrics-hausdorff').text('1.3');
+                this.$('.g-seg-metrics-assd').text('0.2');
             });
     },
     _setSliceCount: function () {
